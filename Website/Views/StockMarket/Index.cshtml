@@ -1,0 +1,42 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<datalist id="symbols-list">
+    <option label="Apple, Inc" value="APPL" />
+    <option label="Google" value="GOOG" />
+    <option label="Microsoft" value="MSFT" />
+</datalist>
+
+
+<link href="@Url.Content("~/Content/StockTicker.css")" rel="stylesheet" type="text/css" />
+<script src="@Url.Content("~/Scripts/jquery.color.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Scripts/jquery.signalR.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/signalr/hubs")"></script>
+<script src="@Url.Content("~/Scripts/StockMarket.js")" type="text/javascript"></script>
+
+
+<div id="market-status">
+    <h3>Market Status</h3>
+    <img id="open"   src="@Url.Content("~/Content/GreenLight.png")"  />
+    <img id="closed" src="@Url.Content("~/Content/RedLight.png")" />
+</div>
+
+
+<h2>Live Stock Table</h2>
+<div id="stockTable">
+    <table border="1">
+        <thead>
+            <tr><th>Symbol</th><th>Price</th><th>Open</th><th>High</th><th>Low</th><th>Change</th><th>%</th></tr>
+        </thead>
+        <tbody>
+            <!-- Populated client-side -->
+        </tbody>
+    </table>
+</div>
+
+<div id="stockTicker">
+    <div class="inner">
+        <ul></ul>
+    </div>
+</div>

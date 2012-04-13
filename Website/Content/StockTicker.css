@@ -1,0 +1,59 @@
+﻿#market-status {
+    float: right;
+}
+    #market-status img {
+        opacity: .2;
+    }
+
+    #market-status.Open #open {
+        opacity: 1;
+    }
+
+    #market-status.Closed #closed {
+        opacity: 1;
+    }
+
+#stockTable table {
+    border-collapse: collapse;
+    width: 550px;
+}
+
+    #stockTable table th, #stockTable table td {
+        padding: 2px 6px;
+    }
+
+    #stockTable table td {
+        text-align: right;
+    }
+
+#stockTicker {
+    overflow: hidden;
+    width: 550px;
+    height: 24px;
+    border: 1px solid #999;
+    margin-bottom: 30px;
+}
+
+    #stockTicker .inner {
+        width: 9999px;
+    }
+
+    #stockTicker ul {
+        display: inline-block;
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    #stockTicker li {
+        display: inline;
+        margin-right: 8px;   
+    }
+
+    #stockTicker .symbol {
+        font-weight: bold;
+    }
+
+    #stockTicker .change {
+        font-style: italic;
+    }
