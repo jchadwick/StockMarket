@@ -2,17 +2,19 @@
 using System.Threading;
 using Common;
 using Messages;
+using NServiceBus;
 
 namespace Simulator
 {
-    public class Program
+    public class Program : IWantToRunAtStartup
     {
-        private static IServiceBus _bus;
-        private static StockMarket _stockMarket;
+        private readonly IBus _bus;
+        private readonly StockMarket _stockMarket;
 
-        public static void Main()
+        public Program(IBus bus)
         {
-            new Program().Run();
+            _bus = bus;
+            _stockMarket = StockMarket.Instance = new StockMarket(new StockRepository());
         }
 
         public void Run()
@@ -43,14 +45,19 @@ namespace Simulator
             ShowMenu();
         }
 
+        public void Stop()
+        {
+            _stockMarket.Stop();
+        }
+
+
         private void Initialize()
         {
-            _stockMarket = StockMarket.Instance = new StockMarket();
             _stockMarket.StockChanged += (sender, args) =>
-                Console.WriteLine("  ==== {0} {1} ({2}) ====",
-                                  args.Data.Symbol, args.Data.Price, args.Data.LastChange);
-
-            _bus = new ServiceBus();
+                _bus.Publish(StockChangeEventFactory.Create(args.Data));
+            
+            _stockMarket.MarketStateChanged += (sender, args) =>
+                _bus.Publish(new MarketStateChange(args.Data));
         }
 
         private void ShowMenu()

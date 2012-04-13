@@ -1,5 +1,6 @@
 using Common;
 using Messages;
+using NServiceBus;
 using SignalR;
 using SignalR.Hosting.AspNet;
 using SignalR.Infrastructure;
@@ -7,7 +8,7 @@ using Website.Controllers;
 
 namespace Website.Listeners
 {
-    public class StockMarketListener
+    public class StockMarketListener : IHandleMessages<IStockChangeEvent>, IHandleMessages<MarketStateChange> 
     {
         private readonly IStockRepository _stocks;
 

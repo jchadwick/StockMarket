@@ -1,8 +1,7 @@
 ﻿using System.Web.Mvc;
 using System.Web.Routing;
 using Common;
-using Messages;
-using Website.Listeners;
+using NServiceBus;
 
 namespace Website
 {
@@ -11,7 +10,6 @@ namespace Website
         // If we had an IoC container we wouldn't need these...
         public static IServiceBus ServiceBus { get; private set; }
         public static StockRepository StockRepository { get; private set; }
-        public static StockMarket StockMarket { get; private set; }
 
         public static void RegisterGlobalFilters(GlobalFilterCollection filters)
         {
@@ -38,41 +36,47 @@ namespace Website
             RegisterGlobalFilters(GlobalFilters.Filters);
             RegisterRoutes(RouteTable.Routes);
 
-            StartStockMarketSimulator();
-
             InitializeServiceBus();
         }
 
         private void InitializeServiceBus()
         {
-            var serviceBus = new ServiceBus();
+            var configuration =
+               Configure.WithWeb()
+                   .DefiningEventsAs(t => t.Namespace != null && t.Namespace.StartsWith("Messages"))
+                   .DefaultBuilder()
+                   .XmlSerializer()
+                   .Log4Net()
+                   .MsmqSubscriptionStorage("Simulator")
+                   .MsmqTransport()
+                       .IsTransactional(false)
+                       .PurgeOnStartup(true)
+                   .DefineEndpointName("Simulator")
+                   .UnicastBus()
+                       .ImpersonateSender(false);
 
-            serviceBus.Subscribe<MarketStateChangeRequest>(
-                changeRequest => StockMarket.MarketState = changeRequest.NewState);
+            var bus = 
+                configuration
+                    .CreateBus()
+                    .Start(() => Configure.Instance.ForInstallationOn<NServiceBus.Installation.Environments.Windows>().Install());
 
-            ServiceBus = serviceBus;
+            ServiceBus = new NServiceBusAdapter(bus);
         }
 
-        private void StartStockMarketSimulator()
+
+        class NServiceBusAdapter : IServiceBus
         {
-            StockMarket = new StockMarket(StockRepository);
-            StockMarket.AddStock("MSFT", 26.31m);
-            StockMarket.AddStock("APPL", 404.18m);
-            StockMarket.AddStock("GOOG", 596.30m);
-            StockMarket.AddStock("SUN", 596.30m);
-            StockMarket.AddStock("CSCO", 300);
-            StockMarket.AddStock("AMZN", 170);
+            private readonly IBus _bus;
 
-            var stockMarketListener = new StockMarketListener();
-            
-            StockMarket.MarketStateChanged += (sender, args) =>
-                stockMarketListener.Handle(new MarketStateChange(args.Data));
-            
-            StockMarket.StockChanged += (sender, args) =>
-                stockMarketListener.Handle(StockChangeEventFactory.Create(args.Data));
+            public NServiceBusAdapter(IBus bus)
+            {
+                _bus = bus;
+            }
 
-            
-            StockMarket.Start();
+            public void Publish<T>(T message)
+            {
+                _bus.Publish(message);
+            }
         }
     }
 }
