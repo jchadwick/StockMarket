@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Threading;
 using Common;
+using MassTransit;
 using Messages;
+using IServiceBus = MassTransit.IServiceBus;
 
 namespace Simulator
 {
@@ -45,12 +47,21 @@ namespace Simulator
 
         private void Initialize()
         {
-            _stockMarket = StockMarket.Instance = new StockMarket();
-            _stockMarket.StockChanged += (sender, args) =>
-                Console.WriteLine("  ==== {0} {1} ({2}) ====",
-                                  args.Data.Symbol, args.Data.Price, args.Data.LastChange);
+            _bus = ServiceBusFactory.New(sbc =>
+            {
+                sbc.UseRabbitMqRouting();
+                sbc.ReceiveFrom("rabbitmq://localhost/StockMarket");
+            });
 
-            _bus = new ServiceBus();
+            _stockMarket = StockMarket.Instance = new StockMarket();
+
+            _bus.SubscribeHandler<MarketStateChangeRequest>(msg => _stockMarket.MarketState = msg.NewState);
+            
+            _stockMarket.MarketStateChanged += (sender, args) =>
+                _bus.Publish(new MarketStateChange(args.Data));
+
+            _stockMarket.StockChanged += (sender, args) =>
+                _bus.Publish(StockChangeEventFactory.Create(args.Data));
         }
 
         private void ShowMenu()
