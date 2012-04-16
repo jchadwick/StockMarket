@@ -11,11 +11,24 @@ namespace Common
 
     public class ServiceBus : IServiceBus
     {
+        private readonly Action<dynamic> _publish;
+
         private readonly IList<KeyValuePair<Type, Action<dynamic>>> _subscribers = 
             new List<KeyValuePair<Type, Action<dynamic>>>();
 
+        public ServiceBus(Action<dynamic> publish = null)
+        {
+            _publish = publish;
+        }
+
         public void Publish<T>(T message)
         {
+            if(_publish != null)
+            {
+                _publish(message);
+                return;
+            }
+
             var subscribers = _subscribers.Where(x => x.Key == typeof (T)).Select(x => x.Value);
 
             foreach (var subscriber in subscribers)

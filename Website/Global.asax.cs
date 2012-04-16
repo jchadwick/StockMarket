@@ -1,8 +1,10 @@
 ﻿using System.Web.Mvc;
 using System.Web.Routing;
 using Common;
+using MassTransit;
 using Messages;
 using Website.Listeners;
+using IServiceBus = Common.IServiceBus;
 
 namespace Website
 {
@@ -11,7 +13,6 @@ namespace Website
         // If we had an IoC container we wouldn't need these...
         public static IServiceBus ServiceBus { get; private set; }
         public static StockRepository StockRepository { get; private set; }
-        public static StockMarket StockMarket { get; private set; }
 
         public static void RegisterGlobalFilters(GlobalFilterCollection filters)
         {
@@ -38,41 +39,20 @@ namespace Website
             RegisterGlobalFilters(GlobalFilters.Filters);
             RegisterRoutes(RouteTable.Routes);
 
-            StartStockMarketSimulator();
-
             InitializeServiceBus();
         }
 
         private void InitializeServiceBus()
         {
-            var serviceBus = new ServiceBus();
+            var listener = new StockMarketListener();
 
-            serviceBus.Subscribe<MarketStateChangeRequest>(
-                changeRequest => StockMarket.MarketState = changeRequest.NewState);
+            var bus = ServiceBusFactory.New(sbc => {
+                sbc.UseRabbitMqRouting();
+                sbc.ReceiveFrom("rabbitmq://localhost/StockMarket_Website");
 
-            ServiceBus = serviceBus;
-        }
-
-        private void StartStockMarketSimulator()
-        {
-            StockMarket = new StockMarket(StockRepository);
-            StockMarket.AddStock("MSFT", 26.31m);
-            StockMarket.AddStock("APPL", 404.18m);
-            StockMarket.AddStock("GOOG", 596.30m);
-            StockMarket.AddStock("SUN", 596.30m);
-            StockMarket.AddStock("CSCO", 300);
-            StockMarket.AddStock("AMZN", 170);
-
-            var stockMarketListener = new StockMarketListener();
-            
-            StockMarket.MarketStateChanged += (sender, args) =>
-                stockMarketListener.Handle(new MarketStateChange(args.Data));
-            
-            StockMarket.StockChanged += (sender, args) =>
-                stockMarketListener.Handle(StockChangeEventFactory.Create(args.Data));
-
-            
-            StockMarket.Start();
+                sbc.Subscribe(subs => subs.Handler<StockPriceChange>(listener.Handle));
+                sbc.Subscribe(subs => subs.Handler<MarketStateChange>(listener.Handle));
+            });
         }
     }
 }

@@ -8,9 +8,9 @@ namespace Messages
         {
             StockPriceChange change;
 
-            if (stock.Change > 0)
+            if (stock.LastChange > 0)
                 change = new StockPriceIncrease();
-            else if (stock.Change < 0)
+            else if (stock.LastChange < 0)
                 change = new StockPriceDecrease();
             else
             {
